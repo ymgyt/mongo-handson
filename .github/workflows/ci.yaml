@@ -47,7 +47,7 @@ jobs:
           sudo echo "127.0.0.1 mongo1" | sudo tee -a /etc/hosts
           sudo echo "127.0.0.1 mongo2" | sudo tee -a /etc/hosts
           sudo echo "127.0.0.1 mongo3" | sudo tee -a /etc/hosts
-          cd repository_interfaces && make test NEXTEST_PROFILE=ci
+          make test NEXTEST_PROFILE=ci
       - name: Print sccache stats
         run: sccache --show-stats
       - name: Stop sccache server
