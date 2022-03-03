@@ -19,7 +19,7 @@ function wait_replicaset_ready() {
 # host名が名前解決できるか確認する。
 function check_dns_resolution() {
    local host=$1
-   ping -o "${host}" > /dev/null || (echo "failed to resolve host ${host}" && exit 1)
+   ping -c 1 "${host}" > /dev/null || (echo "failed to resolve host ${host}" && exit 1)
    echo "resolve ${host} ok"
 }
 
