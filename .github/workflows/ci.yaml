@@ -1,0 +1,54 @@
+name: ci
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    env:
+      RUST_BACKTRACE: full
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 2G
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install sccache (ubuntu-latest)
+        env:
+          LINK: https://github.com/mozilla/sccache/releases/download
+          SCCACHE_VERSION: v0.2.15
+        run: |
+          SCCACHE_FILE=sccache-$SCCACHE_VERSION-x86_64-unknown-linux-musl
+          mkdir -p $HOME/.local/bin
+          curl -sSfL "$LINK/$SCCACHE_VERSION/$SCCACHE_FILE.tar.gz" | tar xz
+          mv -f $SCCACHE_FILE/sccache $HOME/.local/bin/sccache
+          chmod +x $HOME/.local/bin/sccache
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.58.1
+          override: true
+      - name: Install cargo-nextest
+        shell: bash
+        run: |
+          curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Start sccache server
+        run: sccache --start-server
+      - name: test
+        run: |
+          sudo echo "127.0.0.1 mongo1" >> /etc/hosts
+          sudo echo "127.0.0.1 mongo2" >> /etc/hosts
+          sudo echo "127.0.0.1 mongo3" >> /etc/hosts
+          cd repository_interfaces && make test NEXTEST_PROFILE=ci
+      - name: Print sccache stats
+        run: sccache --show-stats
+      - name: Stop sccache server
+        run: sccache --stop-server || true
